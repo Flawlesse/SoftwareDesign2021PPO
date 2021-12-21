@@ -36,7 +36,6 @@ class TokenState(
 }
 
 
-
 class ExpressionViewModel : ViewModel() {
     private val _expressionString = MutableLiveData<String>()
     val expressionString: LiveData<String> = _expressionString
@@ -65,6 +64,7 @@ class ExpressionViewModel : ViewModel() {
     }
 
     fun clearToken() {
+        if (blockInput) return
         if (tokens.size == 1) return
         if (tokens.last().type == TOKEN_TYPE.OPERATOR) {
             if (tokens.last().str in (PREFIX_OPERATORS + "^("))
@@ -72,8 +72,7 @@ class ExpressionViewModel : ViewModel() {
             else if (tokens.last().str == ")")
                 scopeBalance++
             tokens.removeLast()
-        }
-        else {
+        } else {
             tokens.last().str = tokens.last().str.dropLast(1)
             if (tokens.last().str.isEmpty())
                 tokens.removeLast()
@@ -99,11 +98,18 @@ class ExpressionViewModel : ViewModel() {
     }
 
     private fun tryInput(tokenPart: String): Boolean {
+        if (blockInput)
+            return false
+
         val lastToken = tokens.last()
         if (lastToken.type == TOKEN_TYPE.NUMBER) {
             // can it be a following symbol in the last number?
 
             if (lastToken.str.length == MAX_LENGTH && tokenPart !in BINARY_OPERATORS)
+                return false
+            if ((lastToken.isE || lastToken.isPi)
+                && tokenPart !in (BINARY_OPERATORS + PREFIX_OPERATORS + ")")
+            )
                 return false
             when (tokenPart) {
                 "π" -> return false
@@ -115,7 +121,7 @@ class ExpressionViewModel : ViewModel() {
                     return true
                 }
                 "." -> {
-                    if (lastToken.wasDot || lastToken.str.isEmpty())
+                    if (lastToken.wasDot || lastToken.str.isEmpty() || lastToken.eBefore)
                         return false
                     lastToken.str += tokenPart
                     lastToken.updateState()
@@ -169,7 +175,7 @@ class ExpressionViewModel : ViewModel() {
             when (tokenPart) {
                 "." -> return false
                 ")" -> {
-                    if (lastToken.str == ")" && scopeBalance > 0){
+                    if (lastToken.str == ")" && scopeBalance > 0) {
                         tokens.add(TokenState(TOKEN_TYPE.OPERATOR, ")"))
                         scopeBalance--
                         return true
@@ -204,7 +210,8 @@ class ExpressionViewModel : ViewModel() {
                 }
                 else -> { // prefix operators + numerals
                     if (lastToken.str != ")") {
-                        val tokenType = if (tokenPart in PREFIX_OPERATORS) TOKEN_TYPE.OPERATOR else TOKEN_TYPE.NUMBER
+                        val tokenType =
+                            if (tokenPart in PREFIX_OPERATORS) TOKEN_TYPE.OPERATOR else TOKEN_TYPE.NUMBER
                         if (tokenType == TOKEN_TYPE.OPERATOR)
                             scopeBalance++
                         tokens.add(TokenState(tokenType, tokenPart))
@@ -225,24 +232,31 @@ class ExpressionViewModel : ViewModel() {
     }
 
     fun calculate() {
-        if (tokens.last().type == TOKEN_TYPE.NUMBER && !isValidNumber(tokens.last())){
+        if (tokens.size == 1) return
+        if (tokens.last().type == TOKEN_TYPE.NUMBER && !isValidNumber(tokens.last())) {
             throw ArithmeticException("Неверное число на конце!")
         }
-        val res = calculator.calculate(tokens, scopeBalance)
-        var answer: Double = res.toDouble()
+        try {
+            val res = calculator.calculate(tokens, scopeBalance)
+            var answer: Double = res.toDouble()
 
-        clearAll()
-        if (answer.isNaN() || answer.isInfinite()){
-            _expressionString.value = res
-            blockInput = true
-        }
-        else {
-            if (answer < 0){
-                tokens.add(TokenState(TOKEN_TYPE.OPERATOR, "-", isMinusPrefix = true))
-                answer = -answer
+            if (answer.isNaN() || answer.isInfinite()) {
+                _expressionString.value = res
+                blockInput = true
+            } else {
+                clearAll()
+                if (answer < 0) {
+                    tokens.add(TokenState(TOKEN_TYPE.OPERATOR, "-", isMinusPrefix = true))
+                    answer = -answer
+                }
+                tokens.add(TokenState(TOKEN_TYPE.NUMBER, answer.toString()))
+                update()
             }
-            tokens.add(TokenState(TOKEN_TYPE.NUMBER, answer.toString()))
-            update()
+        }
+        catch (ex: ArithmeticException){
+            clearAll()
+            _expressionString.value = "Ошибка вычислений"
+            throw ex
         }
     }
 }

@@ -87,6 +87,10 @@ class BasicFunctionsFragment : Fragment() {
     }
 
     private fun onCalculate(){
-        expressionVM.calculate()
+        try {
+            expressionVM.calculate()
+        } catch (ex: ArithmeticException) {
+            Snackbar.make(requireView(), ex.message.toString(), Snackbar.LENGTH_SHORT).show()
+        }
     }
 }

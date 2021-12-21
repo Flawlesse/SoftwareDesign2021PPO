@@ -1,7 +1,7 @@
 package com.flawlesse.opzcalculator
 
-import java.lang.IllegalStateException
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.*
 import kotlin.math.*
 
@@ -10,8 +10,8 @@ class Calculator {
     private val opStack = Stack<TokenState>()
 
     companion object {
-        val BINARY_OPERATORS = listOf("-", "+", "/", "*", "^(")
-        val PREFIX_OPERATORS = listOf("√(", "sin(", "cos(", "tan(", "ctg(", "(")
+        // well, they all act like a scope
+        val OPEN_SCOPE = listOf("^(", "√(", "sin(", "cos(", "tan(", "ctg(", "(")
     }
 
     fun calculate(tokens: List<TokenState>, scopeBalance: Int): String {
@@ -24,42 +24,36 @@ class Calculator {
     private fun toRPN(tokens: MutableList<TokenState>, scopeBalance: Int) {
         var balance = scopeBalance
         tokens.add(TokenState(TOKEN_TYPE.OPERATOR, ")"))
-        while (balance-- != 0){
+        while (balance-- != 0) {
             tokens.add(TokenState(TOKEN_TYPE.OPERATOR, ")"))
         }
 
         // Conversion to RPN list of tokens
         for (t in tokens) {
-            if (t.type == TOKEN_TYPE.NUMBER)
+            if (t.type == TOKEN_TYPE.NUMBER) {
                 rpn.add(t)
-            else if (t.str in (PREFIX_OPERATORS + "^(") || t.isMinusPrefix)
-                // prefix minus can only appear after '('
-                opStack.push(t)
-            else if (t.str == ")"){
-                while (opStack.peek().str !in (PREFIX_OPERATORS + "^(")) {
-                    rpn.add(opStack.pop())
-                }
-                rpn.add(opStack.pop())
+                continue
             }
-            else // it is binary operation without ^
-            {
-                var top = opStack.peek()
-                while (
-                    //top.str in PREFIX_OPERATORS ||
-                    getPriority(top) > getPriority(t)
-                    || top.str != "^(" && getPriority(top) == getPriority(t)
-                ) {
-                    if (top.str in PREFIX_OPERATORS)
-                        break
-                    opStack.pop()
+
+            if (t.str in OPEN_SCOPE) {
+                opStack.push(t)
+            } else if (t.str == ")") {
+                while (opStack.peek().str !in OPEN_SCOPE) {
+                    val top = opStack.pop()
                     rpn.add(top)
-                    top = opStack.peek()
+                }
+                if (opStack.peek().str != "(")
+                    rpn.add(opStack.peek())
+                opStack.pop()
+            } else { // -, +, /, *
+                while (getPriority(opStack.peek()) >= getPriority(t)
+                    && opStack.peek().str !in OPEN_SCOPE
+                ) {
+                    val top = opStack.pop()
+                    rpn.add(top)
                 }
                 opStack.push(t)
             }
-        }
-        while (!opStack.empty()){
-            rpn.add(opStack.pop())
         }
     }
 
@@ -69,83 +63,90 @@ class Calculator {
             if (t.type == TOKEN_TYPE.NUMBER) {
                 if (t.isE) {
                     stack.push(Math.E)
-                }
-                else if (t.isPi) {
+                } else if (t.isPi) {
                     stack.push(Math.PI)
-                }
-                else {
+                } else {
                     stack.push(t.str.toDouble())
                 }
-            }
-            else {
-                when (t.str){
+            } else {
+                when (t.str) {
                     "-" -> {
                         if (t.isMinusPrefix) {
                             stack.push(realignDouble(-stack.pop()))
                         } else {
-                            val rhs = stack.pop()
-                            val lhs = stack.pop()
+                            val rhs = realignDouble(stack.pop())
+                            val lhs = realignDouble(stack.pop())
                             stack.push(realignDouble(lhs - rhs))
                         }
                     }
                     "+" -> {
-                        val rhs = stack.pop()
-                        val lhs = stack.pop()
+                        val rhs = realignDouble(stack.pop())
+                        val lhs = realignDouble(stack.pop())
                         stack.push(realignDouble(lhs + rhs))
                     }
                     "*" -> {
-                        val rhs = stack.pop()
-                        val lhs = stack.pop()
+                        val rhs = realignDouble(stack.pop())
+                        val lhs = realignDouble(stack.pop())
                         stack.push(realignDouble(lhs * rhs))
                     }
                     "/" -> {
-                        val rhs = stack.pop()
-                        val lhs = stack.pop()
+                        val rhs = realignDouble(stack.pop())
+                        val lhs = realignDouble(stack.pop())
+                        if (rhs == 0.0)
+                            throw ArithmeticException("Деление на ноль!")
                         stack.push(realignDouble(lhs / rhs))
                     }
                     "^(" -> {
-                        val rhs = stack.pop()
-                        val lhs = stack.pop()
+                        val rhs = realignDouble(stack.pop())
+                        val lhs = realignDouble(stack.pop())
+                        if (lhs < 0 && rhs.rem(1) != 0.0) {
+                            throw ArithmeticException("Дробная степень с отрицательным числом!")
+                        }
                         stack.push(realignDouble(lhs.pow(rhs)))
                     }
                     "√(" -> {
-                        stack.push(realignDouble(sqrt(stack.pop())))
+                        stack.push(realignDouble(sqrt(realignDouble(stack.pop()))))
                     }
                     "sin(" -> {
-                        stack.push(realignDouble(sin(stack.pop())))
+                        stack.push(realignDouble(sin(realignDouble(stack.pop()))))
                     }
                     "cos(" -> {
-                        stack.push(realignDouble(cos(stack.pop())))
+                        stack.push(realignDouble(cos(realignDouble(stack.pop()))))
                     }
                     "tan(" -> {
-                        stack.push(realignDouble(tan(stack.pop())))
+                        val top = realignDouble(stack.pop())
+                        var res = realignDouble(cos(top))
+                        if (res == 0.0)
+                            throw ArithmeticException("Деление на ноль!")
+                        res = realignDouble(realignDouble(sin(top)) / res)
+                        stack.push(res)
                     }
                     "ctg(" -> {
-                        val top = stack.pop()
-                        val res = 1.0 / tan(top)
-                        stack.push(realignDouble(realignDouble(res)))
+                        val top = realignDouble(stack.pop())
+                        var res = realignDouble(sin(top))
+                        if (res == 0.0)
+                            throw ArithmeticException("Деление на ноль!")
+                        res = realignDouble(realignDouble(cos(top)) / res)
+                        stack.push(res)
                     }
                 }
             }
         }
 
-        var res = stack.peek().toString()
+        var res = realignDouble(stack.peek()).toString()
         if (res.length > 15)
-            res = res.substring(0,15)
+            res = res.substring(0, 15)
         return res
     }
 
     private fun realignDouble(expr: Double): Double {
-        return expr.toBigDecimal().toDouble()
+        val decimal = BigDecimal(expr).setScale(7, RoundingMode.HALF_EVEN)
+        return decimal.toDouble()
     }
 
     private fun getPriority(token: TokenState): Int {
-        if (token.type == TOKEN_TYPE.NUMBER)
-            throw IllegalStateException("Numbers don't have priority!")
-        return when(token.str) {
-            ")" -> 5
-            in PREFIX_OPERATORS -> 4
-            "^(" -> 3
+        return when (token.str) {
+            in OPEN_SCOPE -> 3
             "*", "/" -> 2
             else -> 1 // +-
         }
