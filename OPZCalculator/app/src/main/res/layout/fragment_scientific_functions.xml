@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/scientific_funcs_color"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:weightSum="4">
+
+        <Button
+            android:id="@+id/cosBtn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/scientific_op_color"
+            android:text="cos"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/sinBtn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/scientific_op_color"
+            android:text="sin"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/eBtn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/scientific_op_color"
+            android:text="e"
+            android:textSize="26sp" />
+
+        <Button
+            android:id="@+id/powBtn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/scientific_op_color"
+            android:text="^"
+            android:textSize="30sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:weightSum="4">
+
+        <Button
+            android:id="@+id/tanBtn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/scientific_op_color"
+            android:text="tan"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/ctgBtn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/scientific_op_color"
+            android:text="ctg"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/piBtn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/scientific_op_color"
+            android:text="π"
+            android:textSize="26sp" />
+
+        <Button
+            android:id="@+id/sqrtBtn"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/scientific_op_color"
+            android:text="√"
+            android:textSize="26sp" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">OPZCalculator</string>
+    <string name="invalidInput">Invalid input!</string>
+</resources>
