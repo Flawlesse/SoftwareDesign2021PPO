@@ -134,12 +134,25 @@ class Calculator {
         }
 
         var res = realignDouble(stack.peek()).toString()
-        if (res.length > 15)
-            res = res.substring(0, 15)
+        if (res in listOf("Infinity", "-Infinity", "NaN")){
+            return res
+        }
+        // get E-part separately, if it exists
+        if (res.length > 15) {
+            if (!res.contains("E")) {
+                res = res.substring(0, 15)
+            }
+            else {
+                val ePart = "E" + res.substringAfter('E')
+                res = res.substring(0, 15 - ePart.length) + ePart
+            }
+        }
         return res
     }
 
     private fun realignDouble(expr: Double): Double {
+        if (expr.isInfinite() || expr.isNaN())
+            return expr
         val decimal = BigDecimal(expr).setScale(7, RoundingMode.HALF_EVEN)
         return decimal.toDouble()
     }
